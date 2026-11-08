@@ -1,322 +1,572 @@
 # RAG Evaluation Results
 
-Total questions: 15
+Total questions: 30
 
-Grade each answer manually: mark ✅ correct / ⚠️ partial / ❌ wrong in the 'Grade' column after review.
+Grade each answer manually: mark Correct, Partial, or Wrong in the 'Grade' line after review.
 
-## 1. How does the ArduinoLink class establish a serial connection?
+## 1. What does the route_after_grading function decide?
 
-**Expected source:** arduino_link.py (__init__)
+**Expected source:** backend/routing.py (route_after_grading)
 
 **Retrieved sources:**
-- arduino_link.py:11-40 (class ArduinoLink)
-- arduino_link.py:12-26 (function __init__)
-- arduino_link.py:37-40 (function close)
-- arduino_link.py:28-35 (function send_command)
-- attendance.py:12-18 (function initialize_csv)
+- tests/test_rewriter_and_routing.py:33-34 (function test_route_goes_to_generate_when_relevant)
+- tests/test_rewriter_and_routing.py:41-42 (function test_route_defaults_to_corrective_path_when_relevance_missing)
+- tests/test_rewriter_and_routing.py:1-42 (module (module level))
+- tests/test_rewriter_and_routing.py:37-38 (function test_route_goes_to_rewrite_when_irrelevant)
+- backend/routing.py:6-14 (function route_after_grading)
 
 **Answer:**
-> To establish a serial connection, the `ArduinoLink` class first checks if Arduino integration is enabled in the configuration (`config.ARDUINO_ENABLED`) (arduino_link.py:12-17). If it is enabled, it attempts to initialize a serial connection using `serial.Serial(config.SERIAL_PORT, config.BAUD_RATE, timeout=1)`, waits for 2 seconds using `time.sleep(2)`, and logs a successful connection message (arduino_link.py:19-22). If a `serial.SerialException` occurs during this process, it logs a warning and sets `self.connection` to `None` to continue without hardware (arduino_link.py:23-26).
+> The `route_after_grading` function decides the next node once documents have been graded (backend/routing.py:7). If there are enough relevant chunks (indicated by a "relevant" state), it decides to move to the "generate" node; otherwise, it takes the corrective path to "rewrite_query" (backend/routing.py:8-14, tests/test_rewriter_and_routing.py:33-42).
 
-**Grade:** _(✅)_
+**Grade:** Correct
 
 ---
 
-## 2. What happens if the Arduino connection fails to open?
+## 2. What is the default value of MIN_RELEVANT_DOCS and what does it control?
 
-**Expected source:** arduino_link.py (__init__ / send_command)
+**Expected source:** backend/config.py
 
 **Retrieved sources:**
-- arduino_link.py:37-40 (function close)
-- arduino_link.py:11-40 (class ArduinoLink)
-- arduino_link.py:12-26 (function __init__)
-- arduino_link.py:28-35 (function send_command)
-- attendance.py:12-18 (function initialize_csv)
+- tests/test_grader_node.py:61-67 (function test_min_relevant_docs_threshold_is_respected)
+- backend/ingestion/loader.py:11-37 (function load_documents)
+- scripts/ingest.py:15-36 (function main)
+- backend/nodes/grader.py:28-104 (function grade_documents)
+- tests/test_grader_node.py:8-12 (function _docs)
 
 **Answer:**
-> If the Arduino connection fails to open, a `serial.SerialException` is caught, a warning message is logged (`"Could not connect to Arduino: {e}. Continuing without hardware."`), and `self.connection` is set to `None` (arduino_link.py:22-25).
+> The provided code context does not specify the default value of `min_relevant_docs`. While `tests/test_grader_node.py` demonstrates setting the value to 2 for testing purposes (tests/test_grader_node.py:63), the actual default value is not defined in the files provided.
+>
+> Regarding its function, `min_relevant_docs` controls the threshold for document relevance evaluation in the `grade_documents` node: if the number of relevant documents found is greater than or equal to `min_relevant_docs`, the relevance state is set to "relevant"; otherwise, it is set to "irrelevant," which triggers the graph's corrective path (backend/nodes/grader.py:29-31, 80-81).
 
-**Grade:** _(✅)_
+**Grade:** Partial
 
 ---
 
-## 3. What does the mark_attendance function do?
+## 3. How many chunks does the retriever fetch per query by default?
 
-**Expected source:** attendance.py (mark_attendance)
+**Expected source:** backend/config.py (RETRIEVAL_K) / backend/nodes/retriever.py
 
 **Retrieved sources:**
-- test_attendance.py:89-100 (function test_mark_attendance_ignores_unknown)
-- attendance.py:21-49 (function mark_attendance)
-- test_attendance.py:72-86 (function test_mark_attendance_no_duplicates)
-- test_attendance.py:54-69 (function test_mark_attendance_writes_record)
-- attendance.py:12-18 (function initialize_csv)
+- backend/ingestion/indexer.py:34-36 (function collection_count)
+- backend/ingestion/indexer.py:21-31 (function index_documents)
+- tests/test_api.py:53-62 (function test_knowledge_base_counts_chunks_per_source)
+- backend/nodes/retriever.py:10-54 (function retrieve)
+- backend/nodes/retriever.py:1-54 (module (module level))
 
 **Answer:**
-> Based on the provided context, the `mark_attendance` function marks attendance for a recognized face and returns `True` if attendance was newly marked, or `False` otherwise (attendance.py:21-34). 
-> 
-> Specifically, it performs the following steps:
-> 1. It checks if the provided `name` is `"Unknown"` or if it already exists in the `marked_names` set; if so, it returns `False` (attendance.py:31-32).
-> 2. It gets the current date and time (attendance.py:34-36).
-> 3. It attempts to open the attendance file in append mode (`ATTENDANCE_FILE`) and writes a new row containing the `name`, date, time, and `session_id` (attendance.py:39-42).
-> 4. If the write is successful, it adds the `name` to the `marked_names` set, logs an info message, and returns `True` (attendance.py:43-45).
-> 5. If an `IOError` occurs during writing, it logs an error and returns `False` (attendance.py:46-49).
+> The provided code context does not specify a numerical default for how many chunks the retriever fetches per query. It indicates that the retriever fetches the number of chunks defined by `settings.retrieval_k` (`backend/nodes/retriever.py:27`, `backend/nodes/retriever.py:16`).
 
-**Grade:** _(✅)_
+**Grade:** Partial
 
 ---
 
-## 4. Does mark_attendance prevent duplicate entries for the same person?
+## 4. What fields does GraphState hold?
 
-**Expected source:** attendance.py (mark_attendance)
+**Expected source:** backend/state.py (GraphState)
 
 **Retrieved sources:**
-- test_attendance.py:72-86 (function test_mark_attendance_no_duplicates)
-- attendance.py:21-49 (function mark_attendance)
-- test_attendance.py:89-100 (function test_mark_attendance_ignores_unknown)
-- test_attendance.py:54-69 (function test_mark_attendance_writes_record)
-- test_attendance.py:37-51 (function test_initialize_csv_does_not_overwrite)
+- backend/nodes/grader.py:1-104 (module (module level))
+- backend/graph.py:1-73 (module (module level))
+- backend/graph.py:42-67 (function build_graph)
+- backend/events.py:1-52 (module (module level))
+- backend/nodes/retriever.py:1-54 (module (module level))
 
 **Answer:**
-> Yes, `mark_attendance` prevents duplicate entries for the same person (attendance.py:34-35, test_attendance.py:72-86). 
-> 
-> If a person's name is already in `marked_names`, `mark_attendance` returns `False` and does not write a new record to the CSV file (attendance.py:34-45, test_attendance.py:72-86).
+> The provided code context does not contain the definition or the fields of the `GraphState` class. While `GraphState` is imported in `backend/nodes/grader.py` (line 10), `backend/graph.py` (line 12), and `backend/nodes/retriever.py` (line 5), the contents of the file where it is defined are not provided.
 
-**Grade:** _(✅)_
+**Grade:** Wrong
 
 ---
 
-## 5. What columns are written to the attendance CSV file?
+## 5. Which models are used for the LLM and for embeddings by default?
 
-**Expected source:** attendance.py (initialize_csv / mark_attendance)
+**Expected source:** backend/config.py / backend/llm.py / backend/embeddings.py
 
 **Retrieved sources:**
-- attendance.py:12-18 (function initialize_csv)
-- test_attendance.py:54-69 (function test_mark_attendance_writes_record)
-- test_attendance.py:37-51 (function test_initialize_csv_does_not_overwrite)
-- test_attendance.py:89-100 (function test_mark_attendance_ignores_unknown)
-- test_attendance.py:72-86 (function test_mark_attendance_no_duplicates)
+- backend/embeddings.py:1-15 (module (module level))
+- backend/embeddings.py:10-15 (function get_embeddings)
+- backend/llm.py:10-16 (function get_llm)
+- backend/llm.py:1-16 (module (module level))
+- backend/config.py:13-45 (class Settings)
 
 **Answer:**
-> Based on the provided code context, the columns written to the attendance CSV file are:
-> - `Name`
-> - `Date`
-> - `Time`
-> - `Session`
-> 
-> (attendance.py:12-18, test_attendance.py:54-69)
+> By default, the LLM and embedding models are:
+>
+> *   **LLM:** `llama3.1:8b` (backend/config.py:23)
+> *   **Embeddings:** `nomic-embed-text` (backend/config.py:24)
 
-**Grade:** _(✅)_
+**Grade:** Correct
 
 ---
 
-## 6. How is a person's name extracted from their encoding image filename?
+## 6. What chunk size and overlap are used during ingestion?
 
-**Expected source:** simple_facerec.py (load_encoding_images)
+**Expected source:** backend/config.py / backend/ingestion/chunker.py
 
 **Retrieved sources:**
-- simple_facerec.py:17-49 (function load_encoding_images)
-- simple_facerec.py:9-101 (class SimpleFacerec)
-- simple_facerec.py:10-15 (function __init__)
-- simple_facerec.py:51-101 (function detect_known_faces)
-- attendance.py:21-49 (function mark_attendance)
+- tests/test_ingestion.py:1-25 (module (module level))
+- backend/ingestion/chunker.py:1-25 (module (module level))
+- backend/ingestion/indexer.py:9-18 (function _chunk_id)
+- backend/ingestion/indexer.py:34-36 (function collection_count)
+- backend/ingestion/chunker.py:8-25 (function split_documents)
 
 **Answer:**
-> A person's name is extracted from their encoding image filename by taking the filename without its extension, splitting it by the underscore character `_`, and taking the first part (index 0) of the resulting split (simple_facerec.py:32-35). For example, this strips numbered suffixes so that filenames like "Daniyal_1" and "Daniyal_2" both map to "Daniyal" (simple_facerec.py:34-35).
+> The chunk size and overlap used during ingestion are retrieved from the application settings by default, though they can be overridden by arguments provided to the `split_documents` function. Specifically:
+>
+> *   If `chunk_size` is not provided to the function, `settings.chunk_size` is used (backend/ingestion/chunker.py:18).
+> *   If `chunk_overlap` is not provided to the function, `settings.chunk_overlap` is used (backend/ingestion/chunker.py:19).
 
-**Grade:** _(✅)_
+**Grade:** Partial
 
 ---
 
-## 7. What face recognition tolerance is used and where is it defined?
+## 7. How does it decide the documents are bad?
 
-**Expected source:** simple_facerec.py (detect_known_faces) / config.py
+**Expected source:** backend/nodes/grader.py + backend/routing.py
 
 **Retrieved sources:**
-- simple_facerec.py:51-101 (function detect_known_faces)
-- simple_facerec.py:10-15 (function __init__)
-- simple_facerec.py:9-101 (class SimpleFacerec)
-- overlay.py:9-32 (function draw_face_box)
-- simple_facerec.py:17-49 (function load_encoding_images)
+- tests/test_web_search_node.py:15-25 (function test_to_documents_maps_fields_and_skips_empty_bodies)
+- backend/ingestion/loader.py:11-37 (function load_documents)
+- tests/test_grader_node.py:30-37 (function test_grade_documents_flags_irrelevant_when_nothing_passes)
+- tests/test_ingestion.py:5-13 (function test_load_documents_reads_only_supported_non_empty_files)
+- tests/test_generator_node.py:6-18 (function _docs)
 
 **Answer:**
-> Based on the provided context, the face recognition tolerance is defined by `config.FACE_RECOGNITION_TOLERANCE` (simple_facerec.py: 72, 80, 85).
+> Based on the provided code, the determination of whether documents are "bad" (or irrelevant) occurs within the `grade_documents` function. When documents do not meet the grading criteria, they are filtered out and the relevance is flagged as "irrelevant":
+>
+> *   The `grade_documents` function performs grading, and if nothing passes the criteria, it updates the "relevance" to "irrelevant" and sets the "documents" list to empty (tests/test_grader_node.py:30-37).
+> *   The actual grading logic is delegated to a helper function, `_grade_chunk`, which is used during the grading process (tests/test_grader_node.py:31).
 
-**Grade:** _(✅)_
+**Grade:** Partial
 
 ---
 
-## 8. How does detect_known_faces determine the best match for a face?
+## 8. What happens when the model breaks?
 
-**Expected source:** simple_facerec.py (detect_known_faces)
+**Expected source:** backend/nodes/grader.py / rewriter.py / generator.py (error handling)
 
 **Retrieved sources:**
-- simple_facerec.py:51-101 (function detect_known_faces)
-- overlay.py:9-32 (function draw_face_box)
-- simple_facerec.py:10-15 (function __init__)
-- simple_facerec.py:9-101 (class SimpleFacerec)
-- simple_facerec.py:17-49 (function load_encoding_images)
+- tests/test_generator_node.py:57-59 (function broken)
+- tests/test_api.py:34-43 (function test_health_degrades_when_store_is_unavailable)
+- tests/test_generator_node.py:56-65 (function test_generate_reports_llm_failure)
+- backend/api/routes.py:17-32 (function health)
+- scripts/healthcheck.py:25-63 (function main)
 
 **Answer:**
-> To determine the best match for a face, `detect_known_faces` performs the following steps:
-> 
-> 1. It compares the face encoding against all known face encodings using `face_recognition.compare_faces` with a specified tolerance (`config.FACE_RECOGNITION_TOLERANCE`) (simple_facerec.py:73-77).
-> 2. It calculates the face distances between the known face encodings and the detected face encoding using `face_recognition.face_distance` (simple_facerec.py:79-82).
-> 3. It finds the index of the best match by locating the minimum value in the face distances array using `np.argmin(face_distances)` (simple_facerec.py:84).
-> 4. It verifies that the match is valid and that the face distance is strictly less than `config.FACE_RECOGNITION_TOLERANCE` before assigning the corresponding known face name (simple_facerec.py:86-87).
+> When the LLM breaks, the behavior depends on the context:
+>
+> *   **During generation:** When the generator encounters an LLM failure, it reports `generator.GENERATION_ERROR_ANSWER` as the `generation` value (tests/test_generator_node.py:63-65).
+> *   **During health checks:** If an error occurs when attempting to retrieve the collection count (which is part of the application's health status), the `chunks_indexed` field is set to `None` and the overall status is set to `"degraded"` (backend/api/routes.py:17-32; tests/test_api.py:34-43).
+>
+> Regarding the `scripts/healthcheck.py` script, if errors occur during model verification or collection retrieval, the script prints specific failure messages and returns an exit code of `1` (scripts/healthcheck.py:25-63).
 
-**Grade:** _(✅)_
+**Grade:** Correct
 
 ---
 
-## 9. What color is used to highlight a newly marked attendance box?
+## 9. How does it avoid adding the same file twice?
 
-**Expected source:** overlay.py (draw_face_box)
+**Expected source:** backend/ingestion/indexer.py (content-hash chunk IDs)
 
 **Retrieved sources:**
-- overlay.py:35-58 (function draw_info_panel)
-- attendance.py:21-49 (function mark_attendance)
-- test_attendance.py:89-100 (function test_mark_attendance_ignores_unknown)
-- test_attendance.py:72-86 (function test_mark_attendance_no_duplicates)
-- overlay.py:9-32 (function draw_face_box)
+- backend/ingestion/loader.py:11-37 (function load_documents)
+- tests/test_web_search_node.py:28-40 (function test_web_search_combines_with_existing_documents)
+- tests/test_ingestion.py:5-13 (function test_load_documents_reads_only_supported_non_empty_files)
+- tests/test_ingestion.py:16-25 (function test_split_documents_respects_size_and_keeps_metadata)
+- scripts/ingest.py:15-36 (function main)
 
 **Answer:**
-> A newly marked attendance box uses the color `(0, 215, 255)` (Gold flash on first detection) (overlay.py:16-17).
+> The provided code context does not indicate that the system has a mechanism to prevent adding the same file twice during the loading process.
+>
+> The `load_documents` function iterates over every file found in the directory path using `root.rglob("*")` and adds each supported, non-empty file to the `documents` list (backend/ingestion/loader.py:18-33). The provided code does not show any logic to check if a file has already been processed or to verify uniqueness based on file path or content during this ingestion phase.
 
-**Grade:** _(✅)_
+**Grade:** Wrong
 
 ---
 
-## 10. What information is displayed in the info panel overlay?
+## 10. How does the thing talk to the browser live?
 
-**Expected source:** overlay.py (draw_info_panel)
+**Expected source:** backend/api/routes.py + backend/runner.py (SSE streaming)
 
 **Retrieved sources:**
-- overlay.py:35-58 (function draw_info_panel)
-- overlay.py:9-32 (function draw_face_box)
-- arduino_link.py:37-40 (function close)
-- simple_facerec.py:10-15 (function __init__)
-- simple_facerec.py:51-101 (function detect_known_faces)
+- backend/llm.py:10-16 (function get_llm)
+- tests/test_web_search_node.py:57-65 (function test_web_search_survives_network_failure)
+- backend/llm.py:1-16 (module (module level))
+- backend/nodes/web_search.py:12-15 (function _search_web)
+- tests/test_web_search_node.py:58-59 (function boom)
 
 **Answer:**
-> Based on the provided code, the info panel overlay displays the following information:
-> - "AI Attendance System" (overlay.py:47)
-> - Session ID (in the format `Session: {session_id}`) (overlay.py:48)
-> - The current date and time (overlay.py:49)
-> - FPS and the number of marked names (in the format `FPS: {int(fps)}   Marked: {len(marked_names)}`) (overlay.py:50)
-> - A bottom watermark stating "Press Q to quit | S to screenshot" (overlay.py:57-58)
+> The provided code context does not contain information regarding how the system talks to a browser live. While `backend/nodes/web_search.py` performs a DuckDuckGo text search (backend/nodes/web_search.py:12-15), there is no mention of live browser interaction.
 
-**Grade:** _(✅)_
+**Grade:** Wrong
 
 ---
 
-## 11. How do I bake a cake?
+## 11. Where does the internet part happen?
 
-**Expected source:** NONE — should refuse, not in codebase
+**Expected source:** backend/nodes/web_search.py
 
 **Retrieved sources:**
-- arduino_link.py:28-35 (function send_command)
-- simple_facerec.py:9-101 (class SimpleFacerec)
-- simple_facerec.py:17-49 (function load_encoding_images)
-- test_attendance.py:37-51 (function test_initialize_csv_does_not_overwrite)
-- arduino_link.py:11-40 (class ArduinoLink)
+- tests/test_web_search_node.py:57-65 (function test_web_search_survives_network_failure)
+- backend/api/routes.py:56-66 (function ask)
+- backend/api/routes.py:1-66 (module (module level))
+- scripts/ask.py:1-57 (module (module level))
+- tests/test_web_search_node.py:58-59 (function boom)
 
 **Answer:**
-> The provided code context does not contain enough information to answer how to bake a cake.
+> Based on the provided code context, the internet search functionality is implemented via a function named `_search_web`, which is located in the `web_search` module (tests/test_web_search_node.py:60).
 
-**Grade:** _(✅)_
+**Grade:** Partial
 
 ---
 
-## 12. What testing framework is used for the attendance tests, and what do they cover?
+## 12. How does the system handle errors?
 
-**Expected source:** test_attendance.py (all test functions)
+**Expected source:** multiple files (grader, rewriter, web_search, generator, events)
 
 **Retrieved sources:**
-- test_attendance.py:89-100 (function test_mark_attendance_ignores_unknown)
-- test_attendance.py:15-19 (function temp_csv)
-- test_attendance.py:54-69 (function test_mark_attendance_writes_record)
-- test_attendance.py:24-34 (function test_initialize_csv_creates_file)
-- test_attendance.py:72-86 (function test_mark_attendance_no_duplicates)
+- tests/test_runner.py:52-64 (function test_node_crash_becomes_an_error_message)
+- tests/test_api.py:34-43 (function test_health_degrades_when_store_is_unavailable)
+- backend/runner.py:1-45 (module (module level))
+- tests/test_generator_node.py:56-65 (function test_generate_reports_llm_failure)
+- tests/test_grader_node.py:49-58 (function test_grader_error_counts_as_not_relevant)
 
 **Answer:**
-> Based on the provided context, the exact testing framework is not explicitly named, but the tests use `assert` statements (implying standard Python `pytest` or `unittest` with standard assertions, though the framework name itself is not stated in the code). 
-> 
-> Regarding what the tests cover, the provided context shows they cover:
-> - `initialize_csv`: Verifies that calling `initialize_csv` creates the file with the correct headers (`["Name", "Date", "Time", "Session"]`) (test_attendance.py:24-34).
-> - `mark_attendance` with a new record: Verifies that a new record is written to the CSV and added to the set of marked individuals (test_attendance.py:54-69).
-> - `mark_attendance` with duplicates: Verifies that `mark_attendance` does not mark the same person twice if they are already in the `marked` set, returning `false` and not adding a new record (test_attendance.py:72-86).
-> - `mark_attendance` with unknown faces: Verifies that `mark_attendance` never marks 'Unknown' faces, returning `false` and keeping the marked set empty (test_attendance.py:89-100).
+> The system handles errors in the following ways depending on the context:
+>
+> *   **During `stream_run`:** When the graph execution crashes, the system yields a message of type `"error"` containing the exception message and ensures no `"final"` type messages are returned (backend/runner.py: 1-11; tests/test_runner.py: 52-64).
+> *   **During `generator.generate`:** If an LLM failure occurs, the generator returns an update containing `generator.GENERATION_ERROR_ANSWER` (tests/test_generator_node.py: 56-65).
+> *   **During `grader.grade_documents`:** If the grader encounters an error, the system counts the documents as `"irrelevant"` and sets the reason for the grades to start with "Grader error" (tests/test_grader_node.py: 49-58).
+> *   **API Health:** If the store is unavailable (e.g., `collection_count` raises a `RuntimeError`), the `/api/health` endpoint returns a status of `"degraded"` with `chunks_indexed` set to `None` (tests/test_api.py: 34-43).
 
-**Grade:** _(⚠️)_
+**Grade:** Correct
 
 ---
 
-## 13. Does the test suite check that duplicate attendance marks are prevented?
+## 13. Where are settings stored?
 
-**Expected source:** test_attendance.py (test_mark_attendance_no_duplicates)
+**Expected source:** backend/config.py
 
 **Retrieved sources:**
-- test_attendance.py:72-86 (function test_mark_attendance_no_duplicates)
-- test_attendance.py:89-100 (function test_mark_attendance_ignores_unknown)
-- test_attendance.py:54-69 (function test_mark_attendance_writes_record)
-- attendance.py:21-49 (function mark_attendance)
-- test_attendance.py:37-51 (function test_initialize_csv_does_not_overwrite)
+- backend/config.py:49-51 (function get_settings)
+- backend/config.py:1-51 (module (module level))
+- backend/llm.py:10-16 (function get_llm)
+- backend/vectorstore.py:1-18 (module (module level))
+- backend/embeddings.py:1-15 (module (module level))
 
 **Answer:**
-> Yes, the test suite checks that duplicate attendance marks are prevented in the function `test_mark_attendance_no_duplicates` (test_attendance.py:72-86).
+> Settings are defined in `backend/config.py` (backend/config.py:1-51) and can be overridden through environment variables or a local `.env` file (backend/config.py:3-4).
 
-**Grade:** _(✅)_
+**Grade:** Correct
 
 ---
 
-## 14. What happens end-to-end when a known face is detected, from recognition to being logged?
+## 14. What does the prompt tell the model to do?
 
-**Expected source:** simple_facerec.py + attendance.py (multi-file)
+**Expected source:** backend/prompts.py (grader, rewriter, generator prompts)
 
 **Retrieved sources:**
-- simple_facerec.py:51-101 (function detect_known_faces)
-- simple_facerec.py:10-15 (function __init__)
-- overlay.py:9-32 (function draw_face_box)
-- attendance.py:21-49 (function mark_attendance)
-- simple_facerec.py:9-101 (class SimpleFacerec)
+- backend/nodes/generator.py:1-103 (module (module level))
+- scripts/healthcheck.py:20-22 (function _has_model)
+- scripts/healthcheck.py:25-63 (function main)
+- backend/llm.py:10-16 (function get_llm)
+- tests/test_runner.py:8-10 (function _fake_generate)
 
 **Answer:**
-> Based on the provided code, here is what happens end-to-end when a known face is detected and logged:
-> 
-> 1. **Face Detection & Recognition:**
->    * The frame is resized and converted to RGB color format (`simple_facerec.py`, lines 51-64).
->    * Face locations and encodings are detected from the frame (`simple_facerec.py`, lines 66-73).
->    * The face encodings are compared against the known face encodings using `face_recognition.compare_faces` and `face_recognition.face_distance` with a defined tolerance (`simple_facerec.py`, lines 79-92).
->    * If a match is found and its distance is within the tolerance, the corresponding name is assigned; otherwise, the name defaults to `"Unknown"` (`simple_facerec.py`, lines 82-96).
->    * The function returns the scaled face locations and a list of detected face names (`simple_facerec.py`, lines 98-101).
-> 
-> 2. **Marking & Logging Attendance:**
->    * When `mark_attendance` is called with the recognized person's name, a set of already-marked names, and a session ID, it first checks if the name is `"Unknown"` or if it is already present in `marked_names`. If so, it returns `False` (`attendance.py`, lines 21-34).
->    * If it is a new valid name, the current date and time are obtained (`attendance.py`, lines 36-38).
->    * The attendance details (name, date, time, and session ID) are written as a row into the attendance CSV file (`attendance.py`, lines 40-43).
->    * The name is added to the `marked_names` set (`attendance.py`, line 44).
->    * An info log is recorded: `f"Attendance marked — Name: {name}, Date: {date_str}, Time: {time_str}"`, and the function returns `True` (`attendance.py`, lines 45-46).
+> The provided code context does not contain the content of the `GENERATOR_PROMPT`, so I cannot answer what it tells the model to do. The file `backend/nodes/generator.py` imports `GENERATOR_PROMPT` (backend/nodes/generator.py:5), but the text of the prompt itself is not included in the provided context.
 
-**Grade:** _(✅)_
+**Grade:** Wrong
 
 ---
 
-## 15. How is the video frame resized before face detection, and why?
+## 15. How do I bake a cake?
 
-**Expected source:** simple_facerec.py (detect_known_faces / __init__, frame_resizing)
+**Expected source:** NONE: should refuse, not in codebase
 
 **Retrieved sources:**
-- simple_facerec.py:10-15 (function __init__)
-- simple_facerec.py:51-101 (function detect_known_faces)
-- simple_facerec.py:9-101 (class SimpleFacerec)
-- overlay.py:9-32 (function draw_face_box)
-- overlay.py:35-58 (function draw_info_panel)
+- backend/llm.py:10-16 (function get_llm)
+- backend/llm.py:1-16 (module (module level))
+- tests/test_rewriter_and_routing.py:33-34 (function test_route_goes_to_generate_when_relevant)
+- tests/test_rewriter_and_routing.py:10-11 (function test_clean_query_uses_fallback_when_blank)
+- tests/test_rewriter_and_routing.py:41-42 (function test_route_defaults_to_corrective_path_when_relevance_missing)
 
 **Answer:**
-> Based on the provided code, the frame is resized before face detection by multiplying its dimensions by the frame resizing factor (`self.frame_resizing`), which is set to `0.35` (simple_facerec.py:10-15, 51-58). 
-> 
-> It is resized this way for "faster speed" while remaining "higher than before to preserve detail for far faces" (simple_facerec.py:10-15).
+> The provided code context does not contain information on how to bake a cake.
 
-**Grade:** _(✅)_
+**Grade:** Correct
+
+---
+
+## 16. Who won the 2022 FIFA World Cup?
+
+**Expected source:** NONE: not in codebase
+
+**Retrieved sources:**
+- tests/test_rewriter_and_routing.py:14-19 (function test_rewrite_query_updates_search_query)
+- tests/test_web_search_node.py:15-25 (function test_to_documents_maps_fields_and_skips_empty_bodies)
+- tests/test_web_search_node.py:1-65 (module (module level))
+- tests/test_runner.py:8-10 (function _fake_generate)
+- tests/test_generator_node.py:6-18 (function _docs)
+
+**Answer:**
+> According to the provided code context, Argentina won the 2022 World Cup (tests/test_web_search_node.py:1-6).
+
+**Grade:** Wrong
+
+---
+
+## 17. How does Django's ORM work?
+
+**Expected source:** NONE: coding question but not about this repo
+
+**Retrieved sources:**
+- backend/embeddings.py:10-15 (function get_embeddings)
+- backend/embeddings.py:1-15 (module (module level))
+- backend/llm.py:10-16 (function get_llm)
+- backend/api/routes.py:17-32 (function health)
+- scripts/ask.py:1-57 (module (module level))
+
+**Answer:**
+> The provided code context does not contain any information regarding how Django's ORM works.
+
+**Grade:** Correct
+
+---
+
+## 18. What font does the dashboard use?
+
+**Expected source:** NONE in indexed data: lives in frontend CSS, which is not indexed
+
+**Retrieved sources:**
+- backend/main.py:26-27 (function dashboard_not_built)
+- backend/main.py:14-28 (function create_app)
+- backend/graph.py:22-39 (function get_topology)
+- backend/events.py:1-52 (module (module level))
+- backend/main.py:1-36 (module (module level))
+
+**Answer:**
+> The provided code context does not contain information regarding the font used by the dashboard.
+
+**Grade:** Correct
+
+---
+
+## 19. How does the retry loop use MAX_REWRITE_ATTEMPTS?
+
+**Expected source:** backend/config.py (setting exists but is not used)
+
+**Retrieved sources:**
+- backend/nodes/rewriter.py:25-60 (function rewrite_query)
+- tests/test_rewriter_and_routing.py:22-30 (function test_rewrite_query_falls_back_to_original_on_llm_error)
+- tests/test_rewriter_and_routing.py:10-11 (function test_clean_query_uses_fallback_when_blank)
+- tests/test_rewriter_and_routing.py:14-19 (function test_rewrite_query_updates_search_query)
+- tests/test_rewriter_and_routing.py:41-42 (function test_route_defaults_to_corrective_path_when_relevance_missing)
+
+**Answer:**
+> The provided code context does not contain any information about a retry loop or a `MAX_REWRITE_ATTEMPTS` constant. Therefore, I cannot answer how such a loop uses that constant.
+
+**Grade:** Correct
+
+---
+
+## 20. How does the system grade web search results?
+
+**Expected source:** NONE: web results are not graded (roadmap item)
+
+**Retrieved sources:**
+- tests/test_web_search_node.py:1-65 (module (module level))
+- backend/nodes/web_search.py:12-15 (function _search_web)
+- backend/state.py:7-28 (class GraphState)
+- backend/nodes/web_search.py:1-87 (module (module level))
+- tests/test_retriever_node.py:7-16 (class FakeStore)
+
+**Answer:**
+> The provided code context does not contain information regarding how the system grades web search results. While the `GraphState` definition includes a `grades` field described as "per-document verdicts: {'source', 'relevant', 'reason'}" (backend/state.py:18-19), the provided files do not describe the logic or process used to perform these gradings.
+
+**Grade:** Correct
+
+---
+
+## 21. How does the agent remember previous questions in a conversation?
+
+**Expected source:** NONE: no multi-turn memory (roadmap item)
+
+**Retrieved sources:**
+- backend/prompts.py:1-42 (module (module level))
+- backend/api/routes.py:56-66 (function ask)
+- scripts/ask.py:1-57 (module (module level))
+- tests/test_api.py:70-84 (function test_ask_streams_runner_messages_as_sse)
+- scripts/ask.py:12-53 (function main)
+
+**Answer:**
+> The provided code context does not contain information about how the agent remembers previous questions in a conversation. Therefore, I cannot answer this question.
+
+**Grade:** Correct
+
+---
+
+## 22. How are PDF files ingested?
+
+**Expected source:** NONE: only .md and .txt are supported (PDF is a roadmap item)
+
+**Retrieved sources:**
+- scripts/ingest.py:15-36 (function main)
+- scripts/ingest.py:1-40 (module (module level))
+- tests/test_ingestion.py:1-25 (module (module level))
+- tests/test_ingestion.py:5-13 (function test_load_documents_reads_only_supported_non_empty_files)
+- backend/ingestion/loader.py:11-37 (function load_documents)
+
+**Answer:**
+> The provided code context does not indicate that PDF files are supported or ingested. According to `backend/ingestion/loader.py`, the system recursively loads files based on a set of `SUPPORTED_EXTENSIONS` (backend/ingestion/loader.py:20), and the provided tests specifically show that files like `.png` are ignored (tests/test_ingestion.py:9-12), while documentation suggests only `.txt` and `.md` files are intended for ingestion (scripts/ingest.py:17, 21).
+
+**Grade:** Correct
+
+---
+
+## 23. How does the system authenticate API requests?
+
+**Expected source:** NONE: no authentication in codebase
+
+**Retrieved sources:**
+- backend/api/routes.py:56-66 (function ask)
+- backend/api/routes.py:1-66 (module (module level))
+- tests/test_api.py:1-84 (module (module level))
+- backend/main.py:1-36 (module (module level))
+- tests/test_api.py:65-67 (function test_ask_rejects_empty_and_oversized_questions)
+
+**Answer:**
+> The provided code context does not contain information regarding how the system authenticates API requests.
+
+**Grade:** Correct
+
+---
+
+## 24. What happens end-to-end when no retrieved chunk is relevant?
+
+**Expected source:** backend/graph.py + routing.py + nodes/rewriter.py + nodes/web_search.py + nodes/generator.py
+
+**Retrieved sources:**
+- backend/ingestion/chunker.py:8-25 (function split_documents)
+- backend/ingestion/indexer.py:9-18 (function _chunk_id)
+- tests/test_ingestion.py:16-25 (function test_split_documents_respects_size_and_keeps_metadata)
+- backend/ingestion/indexer.py:21-31 (function index_documents)
+- backend/ingestion/indexer.py:34-36 (function collection_count)
+
+**Answer:**
+> The provided code context does not contain information regarding what happens when a retrieved chunk is not relevant. The context covers document splitting (backend/ingestion/chunker.py:8-25), chunk ID generation (backend/ingestion/indexer.py:9-18), indexing documents (backend/ingestion/indexer.py:21-31), and counting chunks in a collection (backend/ingestion/indexer.py:34-36), but it does not describe retrieval or relevance processing.
+
+**Grade:** Wrong
+
+---
+
+## 25. What happens if the grader LLM throws an error, and how does that affect routing?
+
+**Expected source:** backend/nodes/grader.py + backend/routing.py
+
+**Retrieved sources:**
+- tests/test_rewriter_and_routing.py:41-42 (function test_route_defaults_to_corrective_path_when_relevance_missing)
+- tests/test_rewriter_and_routing.py:1-42 (module (module level))
+- tests/test_rewriter_and_routing.py:37-38 (function test_route_goes_to_rewrite_when_irrelevant)
+- tests/test_rewriter_and_routing.py:33-34 (function test_route_goes_to_generate_when_relevant)
+- backend/nodes/grader.py:1-104 (module (module level))
+
+**Answer:**
+> The provided code context does not contain information regarding how the system handles errors thrown by the grader LLM or how such errors affect routing.
+
+**Grade:** Wrong
+
+---
+
+## 26. What does the generator do when there is no usable context at all?
+
+**Expected source:** backend/nodes/generator.py + backend/prompts.py
+
+**Retrieved sources:**
+- tests/test_generator_node.py:45-53 (function test_generate_without_context_never_calls_llm)
+- tests/test_generator_node.py:46-47 (function must_not_run)
+- tests/test_generator_node.py:56-65 (function test_generate_reports_llm_failure)
+- tests/test_generator_node.py:57-59 (function broken)
+- backend/nodes/generator.py:53-103 (function generate)
+
+**Answer:**
+> When there is no usable context, the generator node returns an honest "could not find" answer instead of calling the LLM (backend/nodes/generator.py:53-56). Specifically, the `generate` function checks if the `documents` list is empty, and if so, it appends `NO_CONTEXT_ANSWER` to the pieces (backend/nodes/generator.py:73-74). This behavior is confirmed by the test `test_generate_without_context_never_calls_llm`, which asserts that the result matches `generator.NO_CONTEXT_ANSWER` when no documents are provided (tests/test_generator_node.py:45-53).
+
+**Grade:** Correct
+
+---
+
+## 27. How do the tests verify the routing behavior?
+
+**Expected source:** tests/ (routing tests) + backend/routing.py
+
+**Retrieved sources:**
+- tests/test_rewriter_and_routing.py:33-34 (function test_route_goes_to_generate_when_relevant)
+- tests/test_rewriter_and_routing.py:41-42 (function test_route_defaults_to_corrective_path_when_relevance_missing)
+- tests/test_rewriter_and_routing.py:37-38 (function test_route_goes_to_rewrite_when_irrelevant)
+- tests/test_rewriter_and_routing.py:10-11 (function test_clean_query_uses_fallback_when_blank)
+- tests/test_rewriter_and_routing.py:1-42 (module (module level))
+
+**Answer:**
+> The tests verify the routing behavior by checking the output of the `route_after_grading` function against different inputs:
+>
+> *   When the input dictionary contains `{"relevance": "relevant"}`, the route is verified to be `"generate"` (tests/test_rewriter_and_routing.py:33-34).
+> *   When the input dictionary contains `{"relevance": "irrelevant"}`, the route is verified to be `"rewrite_query"` (tests/test_rewriter_and_routing.py:37-38).
+> *   When the input dictionary is empty (`{}`), the route is verified to default to `"rewrite_query"` (tests/test_rewriter_and_routing.py:41-42).
+
+**Grade:** Correct
+
+---
+
+## 28. Why does Flux-CRAG use OpenAI embeddings?
+
+**Expected source:** backend/embeddings.py (uses Ollama nomic-embed-text)
+
+**Retrieved sources:**
+- backend/config.py:13-45 (class Settings)
+- backend/embeddings.py:1-15 (module (module level))
+- backend/state.py:1-28 (module (module level))
+- backend/routing.py:1-14 (module (module level))
+- backend/embeddings.py:10-15 (function get_embeddings)
+
+**Answer:**
+> The provided context does not state that Flux-CRAG uses OpenAI embeddings. Instead, `backend/embeddings.py` indicates that the project uses `OllamaEmbeddings` (backend/embeddings.py:2-10). These embeddings are configured using the `embedding_model` and `ollama_base_url` settings (backend/embeddings.py:10-15), which default to `"nomic-embed-text"` and `"http://localhost:11434"` respectively (backend/config.py:23-25).
+
+**Grade:** Correct
+
+---
+
+## 29. Why does the vector store use Pinecone?
+
+**Expected source:** backend/vectorstore.py (uses persistent ChromaDB)
+
+**Retrieved sources:**
+- backend/vectorstore.py:1-18 (module (module level))
+- backend/vectorstore.py:11-18 (function get_vectorstore)
+- backend/ingestion/indexer.py:34-36 (function collection_count)
+- backend/ingestion/indexer.py:1-36 (module (module level))
+- backend/nodes/retriever.py:1-54 (module (module level))
+
+**Answer:**
+> The provided code context does not mention Pinecone. It explicitly states that the vector store is a "Persistent local ChromaDB vector store" (backend/vectorstore.py:3).
+
+**Grade:** Correct
+
+---
+
+## 30. How does the grader assign a relevance score from 0 to 1 to each chunk?
+
+**Expected source:** backend/nodes/grader.py (structured yes/no verdict with reason, not a score)
+
+**Retrieved sources:**
+- backend/nodes/grader.py:22-25 (function _grade_chunk)
+- backend/nodes/grader.py:28-104 (function grade_documents)
+- backend/nodes/grader.py:13-19 (class GradeResult)
+- tests/test_grader_node.py:49-58 (function test_grader_error_counts_as_not_relevant)
+- tests/test_grader_node.py:15-17 (function _fake_grade)
+
+**Answer:**
+> The provided code does not assign a relevance score from 0 to 1. Instead, the grader performs a binary classification where a chunk is deemed "relevant" if the LLM returns "yes" for its relevance, and "irrelevant" otherwise (backend/nodes/grader.py:41, 45).
+
+**Grade:** Correct
 
 ---
