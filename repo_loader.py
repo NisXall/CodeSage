@@ -23,8 +23,8 @@ import zipfile
 from embed_store import COLLECTION_NAME, get_client, store_chunks
 from ingest import ingest_repo
 
-SAMPLE_REPO_URL = "https://github.com/daniyalahmad45/face-recognition-attendance"
-SAMPLE_NAME = "Sample: face attendance"
+SAMPLE_REPO_URL = "https://github.com/NisXall/CodeSage"
+SAMPLE_NAME = "Sample: CodeSage"
 
 MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024   # size of the .zip itself
 MAX_PY_BYTES = 30 * 1024 * 1024         # total size of the extracted .py files

@@ -45,10 +45,10 @@ def logo(size: int) -> str:
 
 
 SAMPLE_SUGGESTIONS = [
-    ("Entry point", "How does the app start?", "Walk me through what main.py does when the program starts."),
-    ("Data", "How is attendance recorded?", "How does attendance.py record and store attendance?"),
-    ("Vision", "How are faces recognized?", "How does simple_facerec.py detect and recognize faces?"),
-    ("Hardware", "How does it talk to the Arduino?", "How does the code communicate with the Arduino?"),
+    ("Pipeline", "How does indexing work?", "How does CodeSage turn a Python repository into searchable chunks?"),
+    ("Retrieval", "How is code retrieved?", "How does retrieve.py find the most relevant code for a question?"),
+    ("Answers", "How are answers generated?", "How does generate.py create grounded answers with source citations?"),
+    ("Repositories", "How are repos loaded?", "How does repo_loader.py download and index a GitHub repository?"),
 ]
 
 GENERIC_SUGGESTIONS = [
@@ -467,7 +467,7 @@ if not repos:
     with st.container(key="onboard"):
         add_repo_form("main")
         st.markdown("<div class='or-rule label'>or</div>", unsafe_allow_html=True)
-        if st.button("Try the sample repo (face-recognition attendance)", icon=":material/play_arrow:", width="stretch"):
+        if st.button("Try the CodeSage sample repo", icon=":material/play_arrow:", width="stretch"):
             run_indexing(load_sample_repo)
     st.chat_input("Add a repository to start asking questions", disabled=True)
     st.stop()
