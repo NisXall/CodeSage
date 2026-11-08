@@ -20,65 +20,168 @@ from generate import answer_question
 # Each question includes a short note on what a correct answer should
 # reference, so you (or a reader) can grade it by eye afterward.
 EVAL_QUESTIONS = [
+    # ---- 1. Clear hits (grader: relevant, no correction needed) ----
     {
-        "question": "How does the ArduinoLink class establish a serial connection?",
-        "expected_source": "arduino_link.py (__init__)",
+        "question": "What does the route_after_grading function decide?",
+        "expected_source": "backend/routing.py (route_after_grading)",
+        "expected_behavior": "RELEVANT: goes to generate if enough chunks passed, else the corrective path",
     },
     {
-        "question": "What happens if the Arduino connection fails to open?",
-        "expected_source": "arduino_link.py (__init__ / send_command)",
+        "question": "What is the default value of MIN_RELEVANT_DOCS and what does it control?",
+        "expected_source": "backend/config.py",
+        "expected_behavior": "RELEVANT: default is 1, number of chunks that must pass grading",
     },
     {
-        "question": "What does the mark_attendance function do?",
-        "expected_source": "attendance.py (mark_attendance)",
+        "question": "How many chunks does the retriever fetch per query by default?",
+        "expected_source": "backend/config.py (RETRIEVAL_K) / backend/nodes/retriever.py",
+        "expected_behavior": "RELEVANT: 4",
     },
     {
-        "question": "Does mark_attendance prevent duplicate entries for the same person?",
-        "expected_source": "attendance.py (mark_attendance)",
+        "question": "What fields does GraphState hold?",
+        "expected_source": "backend/state.py (GraphState)",
+        "expected_behavior": "RELEVANT: question, search_query, documents, grades, relevance, used_web_search, generation",
     },
     {
-        "question": "What columns are written to the attendance CSV file?",
-        "expected_source": "attendance.py (initialize_csv / mark_attendance)",
+        "question": "Which models are used for the LLM and for embeddings by default?",
+        "expected_source": "backend/config.py / backend/llm.py / backend/embeddings.py",
+        "expected_behavior": "RELEVANT: llama3.1:8b and nomic-embed-text via Ollama",
     },
     {
-        "question": "How is a person's name extracted from their encoding image filename?",
-        "expected_source": "simple_facerec.py (load_encoding_images)",
+        "question": "What chunk size and overlap are used during ingestion?",
+        "expected_source": "backend/config.py / backend/ingestion/chunker.py",
+        "expected_behavior": "RELEVANT: 800 characters, 120 overlap",
+    },
+
+    # ---- 2. Vague queries (weak first retrieval, rewrite should help) ----
+    {
+        "question": "How does it decide the documents are bad?",
+        "expected_source": "backend/nodes/grader.py + backend/routing.py",
+        "expected_behavior": "REWRITE: should be reformulated toward chunk relevance grading",
     },
     {
-        "question": "What face recognition tolerance is used and where is it defined?",
-        "expected_source": "simple_facerec.py (detect_known_faces) / config.py",
+        "question": "What happens when the model breaks?",
+        "expected_source": "backend/nodes/grader.py / rewriter.py / generator.py (error handling)",
+        "expected_behavior": "REWRITE: should be reformulated toward LLM failure handling",
     },
     {
-        "question": "How does detect_known_faces determine the best match for a face?",
-        "expected_source": "simple_facerec.py (detect_known_faces)",
+        "question": "How does it avoid adding the same file twice?",
+        "expected_source": "backend/ingestion/indexer.py (content-hash chunk IDs)",
+        "expected_behavior": "REWRITE: should be reformulated toward duplicate prevention in ingestion",
     },
     {
-        "question": "What color is used to highlight a newly marked attendance box?",
-        "expected_source": "overlay.py (draw_face_box)",
+        "question": "How does the thing talk to the browser live?",
+        "expected_source": "backend/api/routes.py + backend/runner.py (SSE streaming)",
+        "expected_behavior": "REWRITE: should be reformulated toward Server-Sent Events streaming",
     },
     {
-        "question": "What information is displayed in the info panel overlay?",
-        "expected_source": "overlay.py (draw_info_panel)",
+        "question": "Where does the internet part happen?",
+        "expected_source": "backend/nodes/web_search.py",
+        "expected_behavior": "REWRITE: should be reformulated toward web search fallback",
     },
+
+    # ---- 3. Ambiguous queries (grader: partially relevant) ----
+    {
+        "question": "How does the system handle errors?",
+        "expected_source": "multiple files (grader, rewriter, web_search, generator, events)",
+        "expected_behavior": "AMBIGUOUS: should combine several chunks or admit the answer is spread out",
+    },
+    {
+        "question": "Where are settings stored?",
+        "expected_source": "backend/config.py",
+        "expected_behavior": "AMBIGUOUS: should find config.py and not overclaim beyond it",
+    },
+    {
+        "question": "What does the prompt tell the model to do?",
+        "expected_source": "backend/prompts.py (grader, rewriter, generator prompts)",
+        "expected_behavior": "AMBIGUOUS: three prompts exist, should distinguish them or ask which one",
+    },
+
+    # ---- 4. Out-of-scope (grader: irrelevant, should refuse or fall back) ----
     {
         "question": "How do I bake a cake?",
-        "expected_source": "NONE — should refuse, not in codebase",
+        "expected_source": "NONE: should refuse, not in codebase",
+        "expected_behavior": "IRRELEVANT: refuse, no made-up answer",
     },
     {
-        "question": "What testing framework is used for the attendance tests, and what do they cover?",
-        "expected_source": "test_attendance.py (all test functions)",
+        "question": "Who won the 2022 FIFA World Cup?",
+        "expected_source": "NONE: not in codebase",
+        "expected_behavior": "IRRELEVANT: refuse, or take the web fallback if testing the CRAG path",
     },
     {
-        "question": "Does the test suite check that duplicate attendance marks are prevented?",
-        "expected_source": "test_attendance.py (test_mark_attendance_no_duplicates)",
+        "question": "How does Django's ORM work?",
+        "expected_source": "NONE: coding question but not about this repo",
+        "expected_behavior": "IRRELEVANT: refuse, or clearly say it is not in this codebase",
     },
     {
-        "question": "What happens end-to-end when a known face is detected, from recognition to being logged?",
-        "expected_source": "simple_facerec.py + attendance.py (multi-file)",
+        "question": "What font does the dashboard use?",
+        "expected_source": "NONE in indexed data: lives in frontend CSS, which is not indexed",
+        "expected_behavior": "IRRELEVANT: should say it cannot find this in the indexed code",
+    },
+
+    # ---- 5. Plausible but absent features (hardest) ----
+    {
+        "question": "How does the retry loop use MAX_REWRITE_ATTEMPTS?",
+        "expected_source": "backend/config.py (setting exists but is not used)",
+        "expected_behavior": "TRAP: should say the setting is defined but no retry loop uses it yet",
     },
     {
-        "question": "How is the video frame resized before face detection, and why?",
-        "expected_source": "simple_facerec.py (detect_known_faces / __init__, frame_resizing)",
+        "question": "How does the system grade web search results?",
+        "expected_source": "NONE: web results are not graded (roadmap item)",
+        "expected_behavior": "TRAP: should say web results skip grading, not invent a grader",
+    },
+    {
+        "question": "How does the agent remember previous questions in a conversation?",
+        "expected_source": "NONE: no multi-turn memory (roadmap item)",
+        "expected_behavior": "TRAP: should say it is not implemented",
+    },
+    {
+        "question": "How are PDF files ingested?",
+        "expected_source": "NONE: only .md and .txt are supported (PDF is a roadmap item)",
+        "expected_behavior": "TRAP: should say PDF ingestion does not exist",
+    },
+    {
+        "question": "How does the system authenticate API requests?",
+        "expected_source": "NONE: no authentication in codebase",
+        "expected_behavior": "TRAP: should say it is not implemented",
+    },
+
+    # ---- 6. Multi-hop (needs chunks from more than one file) ----
+    {
+        "question": "What happens end-to-end when no retrieved chunk is relevant?",
+        "expected_source": "backend/graph.py + routing.py + nodes/rewriter.py + nodes/web_search.py + nodes/generator.py",
+        "expected_behavior": "RELEVANT but needs re-retrieval to cover the full corrective path",
+    },
+    {
+        "question": "What happens if the grader LLM throws an error, and how does that affect routing?",
+        "expected_source": "backend/nodes/grader.py + backend/routing.py",
+        "expected_behavior": "RELEVANT: error counts as not relevant, so bad context can never pass",
+    },
+    {
+        "question": "What does the generator do when there is no usable context at all?",
+        "expected_source": "backend/nodes/generator.py + backend/prompts.py",
+        "expected_behavior": "RELEVANT: skips the LLM call and says it found no reliable information",
+    },
+    {
+        "question": "How do the tests verify the routing behavior?",
+        "expected_source": "tests/ (routing tests) + backend/routing.py",
+        "expected_behavior": "RELEVANT but needs chunks from two files",
+    },
+
+    # ---- 7. False-premise questions (should correct, not go along) ----
+    {
+        "question": "Why does Flux-CRAG use OpenAI embeddings?",
+        "expected_source": "backend/embeddings.py (uses Ollama nomic-embed-text)",
+        "expected_behavior": "FALSE PREMISE: should correct it, embeddings are local via Ollama",
+    },
+    {
+        "question": "Why does the vector store use Pinecone?",
+        "expected_source": "backend/vectorstore.py (uses persistent ChromaDB)",
+        "expected_behavior": "FALSE PREMISE: should correct it, ChromaDB on disk",
+    },
+    {
+        "question": "How does the grader assign a relevance score from 0 to 1 to each chunk?",
+        "expected_source": "backend/nodes/grader.py (structured yes/no verdict with reason, not a score)",
+        "expected_behavior": "FALSE PREMISE: should correct it, the verdict is binary plus a reason",
     },
 ]
 
