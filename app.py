@@ -5,6 +5,8 @@ Streamlit UI for the codebase RAG assistant. Lets a user add any Python
 repo (GitHub link or .zip upload), chat with it, and see each answer
 alongside the exact source chunks (file + line numbers) used to generate it.
 
+Theme: near-black background, blue shades, pink used sparingly.
+
 Run with: streamlit run app.py
 """
 
@@ -62,14 +64,15 @@ st.markdown(
     @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
     :root {
-        --bg: #141413;
-        --surface: #1C1B19;
-        --surface-2: #262522;
-        --line: #302E2A;
-        --text: #ECE8DF;
-        --muted: #9A958A;
-        --faint: #6C685F;
-        --accent: #E8603C;
+        --bg: #04050A;          /* near-black with a blue cast */
+        --surface: #0A0E1A;     /* cards, composer */
+        --surface-2: #111830;   /* user bubble, hover states */
+        --line: #1B2748;        /* borders */
+        --text: #E6ECFA;
+        --muted: #8E9BC0;
+        --faint: #6B7AA3;
+        --accent: #4D8DFF;      /* blue: main accent */
+        --pink: #FF4FA3;        /* pink: used sparingly */
         --serif: 'Instrument Serif', Georgia, serif;
         --mono: 'IBM Plex Mono', ui-monospace, monospace;
         --sans: 'IBM Plex Sans', system-ui, sans-serif;
@@ -93,7 +96,7 @@ st.markdown(
     .logo { display: inline-block; flex-shrink: 0; line-height: 0; }
     .logo svg { width: 100%; height: 100%; }
     .hello .logo {
-        filter: drop-shadow(0 10px 28px rgba(232, 96, 60, .35));
+        filter: drop-shadow(0 10px 28px rgba(77, 141, 255, .40));
         animation: bob 3.2s ease-in-out infinite;
     }
     @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
@@ -101,7 +104,10 @@ st.markdown(
         font-family: var(--serif); font-weight: 400; font-size: 3.2rem; line-height: 1.05;
         letter-spacing: -.01em; color: var(--text); margin: 1.1rem 0 .5rem; padding: 0;
     }
-    .hello h1 em { color: var(--accent); }
+    .hello h1 em {
+        background: linear-gradient(90deg, var(--accent), var(--pink));
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
     .hello p { color: var(--muted); font-size: .98rem; margin: 0; }
 
     .st-key-suggest div[data-testid="stButton"] > button {
@@ -136,7 +142,7 @@ st.markdown(
         font-size: 1rem; line-height: 1.72; color: var(--text);
     }
     [class*="st-key-msg_"] .stMarkdown code {
-        background: var(--surface-2); color: #F2A285; border-radius: 5px;
+        background: var(--surface-2); color: #9CC2FF; border-radius: 5px;
         padding: .08rem .32rem; font-size: .85em;
     }
 
@@ -147,7 +153,7 @@ st.markdown(
         counter-increment: ref; display: flex; gap: .7rem; align-items: baseline;
         font-family: var(--mono); font-size: .78rem; padding: .16rem 0; color: var(--text);
     }
-    .refs li::before { content: "[" counter(ref) "]"; color: var(--accent); min-width: 1.6rem; }
+    .refs li::before { content: "[" counter(ref) "]"; color: var(--pink); min-width: 1.6rem; }
     .refs .kind { color: var(--faint); }
 
     div[data-testid="stExpander"] details {
@@ -160,7 +166,7 @@ st.markdown(
     /* Thinking indicator */
     .thinking { display: flex; align-items: center; gap: .55rem; color: var(--muted); font-size: .9rem; }
     .thinking i {
-        width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+        width: 6px; height: 6px; border-radius: 50%; background: var(--pink);
         animation: pulse 1.2s ease-in-out infinite;
     }
     .thinking i:nth-child(2) { animation-delay: .15s; }
@@ -173,15 +179,17 @@ st.markdown(
         border-radius: 22px; border: 1px solid var(--line); background: var(--surface);
         box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
     }
-    div[data-testid="stChatInput"] > div:focus-within { border-color: #4A4740; }
+    div[data-testid="stChatInput"] > div:focus-within {
+        border-color: var(--accent); box-shadow: 0 0 0 3px rgba(77, 141, 255, .18);
+    }
     div[data-testid="stChatInput"] textarea { font-size: .98rem; color: var(--text); }
     div[data-testid="stChatInput"] button {
-        border-radius: 12px; background: var(--accent); color: var(--bg);
+        border-radius: 12px; background: var(--pink); color: var(--bg);
     }
     div[data-testid="stChatInput"] button:disabled { background: var(--surface-2); color: var(--faint); }
 
     /* ---------- Sidebar ---------- */
-    section[data-testid="stSidebar"] { background: #0F0F0E; border-right: 1px solid var(--line); }
+    section[data-testid="stSidebar"] { background: #03040A; border-right: 1px solid var(--line); }
     .brand { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
     .brand-name { font-family: var(--serif); font-size: 1.45rem; line-height: 1; color: var(--text); }
     .brand-name em { color: var(--accent); }
@@ -214,7 +222,7 @@ st.markdown(
         background: var(--surface); border-color: var(--line); border-radius: 10px;
     }
     section[data-testid="stSidebar"] div[data-testid="stPopover"] button {
-        justify-content: flex-start; border-radius: 10px; border: 1px dashed #4A4740;
+        justify-content: flex-start; border-radius: 10px; border: 1px dashed #2A3A66;
         background: transparent; color: var(--muted);
     }
     section[data-testid="stSidebar"] div[data-testid="stPopover"] button:hover {
